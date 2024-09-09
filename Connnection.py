@@ -4,22 +4,12 @@ from psycopg2 import OperationalError
 def connect_to_db():
     # Define our connection parameters
     db_params = {
-        "host": "localhost",
-        "dbname": "Ruuby_data",
-        "user": "postgres",
+        "host": "127.0.0.1",
+        "dbname": "cosc3380",
+        "user": "dbs34",
         "port": "5432",
-        "password": "Ruby0909"  # It's better to use environment variables for passwords
+        "password": "Team343380"
     }
-
-    # Alternative connection string for different setup (commented out)
-    # db_params = {
-    #     "dbname": "COSC3380",
-    #     "user": "cosc0218",
-    #     "password": "1642106AS",
-    #     "host": "code.cs.uh.edu",
-    #     "port": "5432",
-    #     "sslmode": "require"
-    # }
 
     try:
         # Attempt to establish a connection
@@ -36,17 +26,8 @@ def connect_to_db():
         print(f"Error connecting to the database: {e}")
         return None, None
     
-def main():
-    # Usage
-    connection, cursor = connect_to_db()
-
-    if connection:
-        # Your database operations here
-        
-        # Don't forget to close the connection when you're done
-        cursor.close()
-        connection.close()
-        print("Database connection closed.")
+def close(cursor, connection):
+    cursor.close()
+    connection.close()
+    print("Database connection closed.")
  
-if __name__ == "__main__":
-    main()

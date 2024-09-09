@@ -1,4 +1,6 @@
 import re
+import Validate
+import Connnection
 
 # Function to parse txt file
 def InputRead(content):
@@ -38,21 +40,36 @@ def InputRead(content):
                     print("Invalid fk format in table {}: {}".format(TableNames, fk_reference))
             else:
                 TableColumns.append(i.strip())
-    #Append to Table dictionary 
-        TableSchema[TableNames] = {
-                            'columns' : TableColumns,
-                            'PKeys' : TablePK,
-                            'FKeys' : TableFK
-        }
+    #Append to Table dictionary
+        if len(TablePK) != 0 or len(TableFK) != 0:
+            TableSchema[TableNames] = {
+                                'columns' : TableColumns,
+                                'PKeys' : TablePK,
+                                'FKeys' : TableFK
+            }
     return TableSchema
 
 def main():
+    #Connecting to database
+    conn , cursor = Connnection.connect_to_db()
+
+    # Open and Reading txt input
     FileName = input("Enter txt name: ")
     try:
         TableInput = open(FileName, 'r')
         content = TableInput.readlines()
         Table = InputRead(content)
-        print(Table)
+        
+        #Process to checking table
+        for TableNames in Table:
+            PrimaryKey = Table[TableNames]['Pkeys'] # As 'col name'
+            ForeignKey = Table[TableNames]['Fkeys'] # As dictionary {col: table.col_refer}
+            #Checking referential integrity
+            for i in ForeignKey:
+                Table_Refer = ForeignKey[i].split('.')
+                Check = Validate.Referential_Integrity_Check(cursor, TableNames, Table_Refer[0], i, Table_Refer[1])
+                # write result
+
     except FileNotFoundError:
         TableInput.close()
         print("File not found error")
