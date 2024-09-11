@@ -6,9 +6,9 @@ def connect_to_db():
     db_params = {
         "host": "127.0.0.1",
         "dbname": "cosc3380",
-        "user": "dbs34",
+        "user": "postgres",
         "port": "5432",
-        "password": "Team343380"
+        "password": "Ruby0909"
     }
 
     try:
@@ -30,4 +30,3 @@ def close(cursor, connection):
     cursor.close()
     connection.close()
     print("Database connection closed.")
- 

@@ -1,13 +1,13 @@
 import psycopg2
 
-def Data_Dependent_check(cursor,TableName1, TableName2, PK , FK1, FK2):
+def Data_Dependent_check(cursor,TableName1, Key1_deter, Key2_depend):
     Query1 ="""
-                SELECT %s, %s, 
-                FROM %s 
-                JOIN %s ON %s = %s
-                WHERE %s<>%s;
+                SELECT a.{}, a.{}, b.{} 
+                FROM {} a
+                JOIN {} b ON a.{} = b.{}
+                WHERE a.{}<>b.{};
 
-            """,(PK, FK1, FK2, TableName1, TableName2, PK, FK1, FK1, FK2)
+            """.format(Key1_deter, Key2_depend, Key2_depend, TableName1, TableName1, Key2_depend, Key2_depend, Key2_depend, Key2_depend)
     
     cursor.execute(Query1)
     Result = cursor.fetchall()
@@ -16,24 +16,25 @@ def Data_Dependent_check(cursor,TableName1, TableName2, PK , FK1, FK2):
 
 def Key_candiate_check(cursor, TableName, key):
     Query2 ="""
-                SELECT COUNT(%s), COUNT(DISTINC(%s))
-                FROM %s;
+                SELECT COUNT({}), COUNT(DISTINCT({}))
+                FROM {};
 
-            """,(key,key,TableName)
+            """.format(key,key,TableName)
     cursor.execute(Query2)
     Rows_count = cursor.fetchone()
     Distinc_count = cursor.fetchone()
 
     return Rows_count == Distinc_count, Query2
 
-def Referential_Integrity_Check(cursor, TableName1, TableName2, FK, FK_Refer):
+def Referential_Integrity_Check(cursor, TableName1, TableName2, FK, PK_Refer):
     Query3 ="""
-                SELECT %s, %s
-                FROM %s
-                LEFT JOIN %s ON %s = %s
-                WHERE %s IS NULL;
+                SELECT {}.{}, {}.{}
+                FROM {}
+                LEFT JOIN {} ON {}.{} = {}.{}
+                WHERE {}.{} IS NULL;
 
-            """,(FK, FK_Refer, TableName1, TableName2, FK, FK_Refer, FK_Refer)
+            """.format(TableName1.lower(), FK, TableName2.lower(), PK_Refer, TableName1.lower(),TableName2.lower(), 
+                       TableName1.lower(), FK, TableName2.lower(), PK_Refer, TableName2.lower(), PK_Refer)
     cursor.execute(Query3)
     Result = cursor.fetchall()
-    return len(Result) == 0
+    return len(Result) == 0, Query3

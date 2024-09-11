@@ -62,16 +62,37 @@ def main():
         
         #Process to checking table
         for TableNames in Table:
-            PrimaryKey = Table[TableNames]['Pkeys'] # As 'col name'
-            ForeignKey = Table[TableNames]['Fkeys'] # As dictionary {col: table.col_refer}
+            PrimaryKey = Table[TableNames]['PKeys'] # As 'col name' in Table
+            ForeignKey = Table[TableNames]['FKeys'] # As dictionary {col: table.col_refer} in Table
+            Col_names = Table[TableNames]['columns'] # As a list in Table
+            non_key_list = []
             #Checking referential integrity
             for i in ForeignKey:
                 Table_Refer = ForeignKey[i].split('.')
-                Check = Validate.Referential_Integrity_Check(cursor, TableNames, Table_Refer[0], i, Table_Refer[1])
+                Check_Integ, Query3 = Validate.Referential_Integrity_Check(cursor, TableNames, Table_Refer[0], i,  Table_Refer[1])
                 # write result
+                if Check_Integ == False:
+                    print("Key {} from tabel {} is not valid".format(TableNames, i))
+                else:
+                    print("Key {} from tabel {} is Valid".format(TableNames, i))
+            #Checking 3NF/DCNF
+            for j in Col_names:
+                if j != PrimaryKey:
+                    Check_candiate, Query2 = Validate.Key_candiate_check(cursor, TableNames, j)
+                    non_key_list.append(j)
+
+            for z in non_key_list:
+                for x in non_key_list:
+                    if x != z:     
+                        Check_dependent, Query1 = Validate.Data_Dependent_check(cursor, TableNames, z, x )
+                        if Check_dependent == False:
+                            ## Table is not normalized
+                            print("tabel {} is not normalized".format(TableNames))
+                            break          
+            ## Table is normalized
+            print("tabel %s is normalized", TableNames)
 
     except FileNotFoundError:
-        TableInput.close()
         print("File not found error")
 
 main()
