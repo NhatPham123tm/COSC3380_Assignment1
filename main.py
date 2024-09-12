@@ -1,6 +1,7 @@
 import re
 import Validate
 import Connnection
+import SqlGenerate
 
 # Function to parse txt file
 def InputRead(content):
@@ -59,39 +60,53 @@ def main():
         TableInput = open(FileName, 'r')
         content = TableInput.readlines()
         Table = InputRead(content)
-        
+        Output_Lines = []
+        Queries = []
         #Process to checking table
         for TableNames in Table:
             PrimaryKey = Table[TableNames]['PKeys'] # As 'col name' in Table
             ForeignKey = Table[TableNames]['FKeys'] # As dictionary {col: table.col_refer} in Table
             Col_names = Table[TableNames]['columns'] # As a list in Table
             non_key_list = []
+            Line = TableNames
             #Checking referential integrity
             for i in ForeignKey:
                 Table_Refer = ForeignKey[i].split('.')
                 Check_Integ, Query3 = Validate.Referential_Integrity_Check(cursor, TableNames, Table_Refer[0], i,  Table_Refer[1])
                 # write result
+                Queries.append(Query3)
                 if Check_Integ == False:
-                    print("Key {} from tabel {} is not valid".format(TableNames, i))
-                else:
-                    print("Key {} from tabel {} is Valid".format(TableNames, i))
-            #Checking 3NF/DCNF
+                    Line = Line + ' ' + 'N'
+                    break
+            if Check_Integ == True:
+                Line = Line + ' ' + 'Y'
+            #Checking key candiate
             for j in Col_names:
                 if j != PrimaryKey:
                     Check_candiate, Query2 = Validate.Key_candiate_check(cursor, TableNames, j)
-                    non_key_list.append(j)
-
+                    if Check_candiate == False:
+                        non_key_list.append(j)
+                    Queries.append(Query2)
+            #Checking 3NF/DCNF by checking non-key dependent relationship
             for z in non_key_list:
                 for x in non_key_list:
                     if x != z:     
                         Check_dependent, Query1 = Validate.Data_Dependent_check(cursor, TableNames, z, x )
+                        Queries.append(Query1)
                         if Check_dependent == False:
-                            ## Table is not normalized
-                            print("tabel {} is not normalized".format(TableNames))
-                            break          
+                            # Table is not normalized
+                            Line = Line + ' ' + 'N'
+                            break
+                if Check_dependent == False:
+                    break          
             ## Table is normalized
-            print("tabel %s is normalized", TableNames)
-
+            if Check_dependent == True:
+                Line = Line + ' ' + 'Y'
+            Output_Lines.append(Line)
+        TableInput.close()
+        Output_FileName = FileName.replace('.txt', '') + "_Output"
+        SqlGenerate.format_output(Output_FileName + ".txt", Output_Lines)
+        SqlGenerate.SQL_output(Queries, Output_FileName + ".sql")
     except FileNotFoundError:
         print("File not found error")
 
