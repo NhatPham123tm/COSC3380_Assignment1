@@ -69,7 +69,9 @@ def main():
             Col_names = Table[TableNames]['columns'] # As a list in Table
             non_key_list = []
             Line = TableNames
+            Queries.append("/* Table {} */ \n".format(TableNames))
             #Checking referential integrity
+            Queries.append("/* Checking FK referential integrity */ \n")
             for i in ForeignKey:
                 Table_Refer = ForeignKey[i].split('.')
                 Check_Integ, Query3 = Validate.Referential_Integrity_Check(cursor, TableNames, Table_Refer[0], i,  Table_Refer[1])
@@ -81,6 +83,7 @@ def main():
             if Check_Integ == True:
                 Line = Line + ' ' + 'Y'
             #Checking key candiate
+            Queries.append("/* Checking columns for key candiate */ \n")
             for j in Col_names:
                 if j != PrimaryKey:
                     Check_candiate, Query2 = Validate.Key_candiate_check(cursor, TableNames, j)
@@ -88,6 +91,7 @@ def main():
                         non_key_list.append(j)
                     Queries.append(Query2)
             #Checking 3NF/DCNF by checking non-key dependent relationship
+            Queries.append("/* Checking non-key data dependent */ \n")
             for z in non_key_list:
                 for x in non_key_list:
                     if x != z:     

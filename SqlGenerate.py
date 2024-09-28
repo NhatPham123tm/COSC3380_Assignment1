@@ -1,3 +1,4 @@
+import textwrap
 # Format output for txt file
 def format_output(filename, lines):
     Output = open(filename, 'w')
@@ -35,7 +36,8 @@ def format_output(filename, lines):
 def SQL_output(queries, FILENAME):
     Sql_Output = open(FILENAME, 'w')
     for i in queries:
-        Sql_Output.write(i)
+        #Delete white space before each line
+        Sql_Output.write(textwrap.dedent(i))
         Sql_Output.write('\n')
     Sql_Output.close
 
