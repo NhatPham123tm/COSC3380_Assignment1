@@ -2,6 +2,7 @@ import re
 import Validate
 import Connnection
 import SqlGenerate
+import sys
 
 # Function to parse txt file
 def InputRead(content):
@@ -51,17 +52,35 @@ def InputRead(content):
     return TableSchema
 
 def main():
-    #Connecting to database
-    conn , cursor = Connnection.connect_to_db()
+    # Check if there are any command-line arguments
+    if len(sys.argv) < 2:
+        print("Usage: python3 script_name.py database=filename.txt")
+        sys.exit(1)
+    
+    # Process command-line arguments
+    for arg in sys.argv[1:]:
+        if arg.startswith("database="):
+            database_file = arg.split("=")[1]
+            # print(f"Database file: {database_file}")
+            Connnection.check_file_exists(database_file)
+    
+    database_name = Connnection.get_filename_without_extension(database_file)
 
     # Open and Reading txt input
-    FileName = input("Enter txt name: ")
-    try:
-        TableInput = open(FileName, 'r')
-        content = TableInput.readlines()
-        Table = InputRead(content)
-        Output_Lines = []
-        Queries = []
+    TableInput = open(database_file, 'r')
+    content = TableInput.readlines()
+    Table = InputRead(content)
+    Output_Lines = []
+    Queries = []
+ 
+    #Connecting to database
+    conn , cursor = Connnection.connect_to_db()
+    if Connnection.connect_to_db:
+        user_name = "dbs34"
+        
+        # 1. set search path
+        query = f"SET search_path TO HW1, examples, public, {user_name}"
+        Connnection.set_search_path(cursor, query)
         #Process to checking table
         for TableNames in Table:
             PrimaryKey = Table[TableNames]['PKeys'] # As 'col name' in Table
@@ -108,10 +127,8 @@ def main():
                 Line = Line + ' ' + 'Y'
             Output_Lines.append(Line)
         TableInput.close()
-        Output_FileName = FileName.replace('.txt', '') + "_Output"
+        Output_FileName = database_name.replace('.txt', '') + "_Output"
         SqlGenerate.format_output(Output_FileName + ".txt", Output_Lines)
         SqlGenerate.SQL_output(Queries, Output_FileName + ".sql")
-    except FileNotFoundError:
-        print("File not found error")
-
+        Connnection.close(cursor, conn)
 main()
