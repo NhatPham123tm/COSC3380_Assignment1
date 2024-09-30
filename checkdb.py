@@ -1,6 +1,6 @@
 import re
-import Validate
 import Connnection
+import Validate
 import SqlGenerate
 import sys
 
@@ -10,6 +10,8 @@ def InputRead(content):
     TableSchema = {}
     
     for line in content:
+        if line == '\n': #skip empty line
+            continue
         line = line.strip()
         # split table name
         line = re.split(r'\(', line,1)
@@ -20,10 +22,11 @@ def InputRead(content):
         TablePK = []
         # List of foregin key holder
         TableFK = {}
-        # split evry element in table name racket
-        line = re.split(r',', line[1].strip(')'))
+        # split every element in table name racket
+        if len(line) > 1:
+            line = re.split(r',', line[1].strip(')'))
+        
         for i in line:
-            #i = i.strip()
             #Looking for PK
             if 'pk' in i:
                 TablePK.append(i.replace('(pk)','').strip())
@@ -61,8 +64,9 @@ def main():
     for arg in sys.argv[1:]:
         if arg.startswith("database="):
             database_file = arg.split("=")[1]
-            # print(f"Database file: {database_file}")
-            Connnection.check_file_exists(database_file)
+            Exist_check = Connnection.check_file_exists(database_file)
+            if Exist_check == False: # Can't find file
+                sys.exit(1)
     
     database_name = Connnection.get_filename_without_extension(database_file)
 
@@ -78,55 +82,71 @@ def main():
     if Connnection.connect_to_db:
         user_name = "dbs34"
         
-        # 1. set search path
+        # set search path
         query = f"SET search_path TO HW1, examples, public, {user_name}"
         Connnection.set_search_path(cursor, query)
+        print("Processing ...")
+
         #Process to checking table
         for TableNames in Table:
             PrimaryKey = Table[TableNames]['PKeys'] # As 'col name' in Table
             ForeignKey = Table[TableNames]['FKeys'] # As dictionary {col: table.col_refer} in Table
             Col_names = Table[TableNames]['columns'] # As a list in Table
+            if len(PrimaryKey) == 0 or len(Col_names) == 0: # in case empty pk or table
+                print("{} missing PK or is empty".format(TableNames))
+                continue
             non_key_list = []
+            TableNames = database_name + '_' + TableNames
             Line = TableNames
             Queries.append("/* Table {} */ \n".format(TableNames))
             #Checking referential integrity
             Queries.append("/* Checking FK referential integrity */ \n")
+            
             for i in ForeignKey:
                 Table_Refer = ForeignKey[i].split('.')
+                Table_Refer[0] = database_name + '_' +  Table_Refer[0]
                 Check_Integ, Query3 = Validate.Referential_Integrity_Check(cursor, TableNames, Table_Refer[0], i,  Table_Refer[1])
                 # write result
                 Queries.append(Query3)
                 if Check_Integ == False:
                     Line = Line + ' ' + 'N'
                     break
-            if Check_Integ == True:
+            if Check_Integ == True or len(ForeignKey) == 0:
                 Line = Line + ' ' + 'Y'
+
             #Checking key candiate
             Queries.append("/* Checking columns for key candiate */ \n")
             for j in Col_names:
-                if j != PrimaryKey:
+                if j not in PrimaryKey:
+                    #print("{} passed".format(j))
                     Check_candiate, Query2 = Validate.Key_candiate_check(cursor, TableNames, j)
                     if Check_candiate == False:
                         non_key_list.append(j)
                     Queries.append(Query2)
+
             #Checking 3NF/DCNF by checking non-key dependent relationship
             Queries.append("/* Checking non-key data dependent */ \n")
+            Table_normalized = True
             for z in non_key_list:
                 for x in non_key_list:
                     if x != z:     
                         Check_dependent, Query1 = Validate.Data_Dependent_check(cursor, TableNames, z, x )
+                        #print("key deter: {} , Key depen: {} , Result: {}".format(z,x,Check_dependent))
                         Queries.append(Query1)
-                        if Check_dependent == False:
+                        if Check_dependent == True:
                             # Table is not normalized
                             Line = Line + ' ' + 'N'
+                            Table_normalized = False
                             break
-                if Check_dependent == False:
+                if Table_normalized == False:
                     break          
             ## Table is normalized
-            if Check_dependent == True:
+            if Table_normalized == True or len(non_key_list) == 0:
                 Line = Line + ' ' + 'Y'
             Output_Lines.append(Line)
         TableInput.close()
+
+        #Creating output file
         Output_FileName = database_name.replace('.txt', '') + "_Output"
         SqlGenerate.format_output(Output_FileName + ".txt", Output_Lines)
         SqlGenerate.SQL_output(Queries, Output_FileName + ".sql")

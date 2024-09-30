@@ -36,11 +36,13 @@ def check_file_exists(file_path):
     # Method 1: Using os.path.exists()
     if os.path.exists(file_path):
         print(f"File exists : {file_path}")
+        return True
     else:
         print(f"File does not exist : {file_path}")
+        return False
 
 def set_search_path(cursor, sql_query=""):
-    print(f"Query : {sql_query}")
+    #print(f"Query : {sql_query}")
     cursor.execute(sql_query)
     # Verify the search_path
     cursor.execute("SHOW search_path;")
