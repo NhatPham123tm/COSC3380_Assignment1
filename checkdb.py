@@ -25,27 +25,32 @@ def InputRead(content):
         # split every element in table name racket
         if len(line) > 1:
             line = re.split(r',', line[1].strip(')'))
-        
         for i in line:
             #Looking for PK
-            if 'pk' in i:
-                TablePK.append(i.replace('(pk)','').strip())
-                TableColumns.append(i.replace('(pk)','').strip())
+            if 'pk' in i.lower():
+                PK_Hold = re.sub(r'\(pk\)', '', i, flags=re.IGNORECASE).strip()
+                pkCheck = re.match(r"[a-zA-Z][0-9]+", PK_Hold)
+                # Check valid Pk column name
+                if pkCheck == None:
+                    print("Invalid pk format in table {}: {}".format(TableNames, PK_Hold))
+                TablePK.append(PK_Hold)
+                TableColumns.append(PK_Hold)
+
             #Loooikng for FK
-            elif 'fk' in i:
+            elif 'fk' in i.lower():
                 i = i.split('(')
                 fk_column = i[0].strip()
-                fk_reference = i[1].replace('fk:', '').strip(')')
+                fk_reference = re.sub(r'fk:','',i[1], flags=re.IGNORECASE).strip(')')
                 #Check valid fk column names
                 fkCheck = re.match(r"[a-zA-Z][0-9]+\.[a-zA-Z][0-9]+", fk_reference)
-                if fkCheck:
-                    TableFK[fk_column] = fk_reference
-                    TableColumns.append(fk_column)
-                else:
+                if fkCheck == None:
                     print("Invalid fk format in table {}: {}".format(TableNames, fk_reference))
+                TableFK[fk_column] = fk_reference
+                TableColumns.append(fk_column)
+
             else:
-                TableColumns.append(i.strip())
-    #Append to Table dictionary
+                TableColumns.append(i.strip().strip(');'))
+        #Append to Table dictionary
         if len(TablePK) != 0 or len(TableFK) != 0:
             TableSchema[TableNames] = {
                                 'columns' : TableColumns,
@@ -106,20 +111,24 @@ def main():
                 Table_Refer = ForeignKey[i].split('.')
                 Table_Refer[0] = database_name + '_' +  Table_Refer[0]
                 Check_Integ, Query3 = Validate.Referential_Integrity_Check(cursor, TableNames, Table_Refer[0], i,  Table_Refer[1])
+                # Skipping error
+                if Query3 == None:
+                    continue
                 # write result
                 Queries.append(Query3)
                 if Check_Integ == False:
                     Line = Line + ' ' + 'N'
                     break
-            if Check_Integ == True or len(ForeignKey) == 0:
+            if len(ForeignKey) == 0 or Check_Integ == True:
                 Line = Line + ' ' + 'Y'
 
             #Checking key candiate
             Queries.append("/* Checking columns for key candiate */ \n")
             for j in Col_names:
                 if j not in PrimaryKey:
-                    #print("{} passed".format(j))
                     Check_candiate, Query2 = Validate.Key_candiate_check(cursor, TableNames, j)
+                    if Query2 == None:# Skipping error
+                        continue
                     if Check_candiate == False:
                         non_key_list.append(j)
                     Queries.append(Query2)
@@ -131,7 +140,8 @@ def main():
                 for x in non_key_list:
                     if x != z:     
                         Check_dependent, Query1 = Validate.Data_Dependent_check(cursor, TableNames, z, x )
-                        #print("key deter: {} , Key depen: {} , Result: {}".format(z,x,Check_dependent))
+                        if Query1 == None:# Skipping error incase error
+                            continue
                         Queries.append(Query1)
                         if Check_dependent == True:
                             # Table is not normalized
@@ -141,7 +151,7 @@ def main():
                 if Table_normalized == False:
                     break          
             ## Table is normalized
-            if Table_normalized == True or len(non_key_list) == 0:
+            if len(non_key_list) == 0 or Table_normalized == True:
                 Line = Line + ' ' + 'Y'
             Output_Lines.append(Line)
         TableInput.close()

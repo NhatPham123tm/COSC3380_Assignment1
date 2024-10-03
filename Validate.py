@@ -15,9 +15,10 @@ def Data_Dependent_check(cursor,TableName1, Key1_deter, Key2_depend):
         # True mean there is dependency
         return len(Result) == 0, Query1
     
-    except psycopg2.errors.UndefinedTable as e:
+    except psycopg2.errors.Error as e:
         print(f"error: {e}")
         print("Data_Dependent_check will return false")
+        cursor.connection.rollback()
         return False, None
 
 def Key_candiate_check(cursor, TableName, key):
@@ -33,9 +34,10 @@ def Key_candiate_check(cursor, TableName, key):
         # True mean is key candiate
         return row_count == distinct_count, Query2
     
-    except psycopg2.errors.UndefinedTable as e:
+    except psycopg2.errors.Error as e:
         print(f"error: {e}")
         print("Key candidate will return false")
+        cursor.connection.rollback()
         return False, None
 
 def Referential_Integrity_Check(cursor, TableName1, TableName2, FK, PK_Refer):
@@ -54,8 +56,9 @@ def Referential_Integrity_Check(cursor, TableName1, TableName2, FK, PK_Refer):
         # True mean referential ingerity hold
         return len(Result) == 0, Query3
     
-    except psycopg2.errors.UndefinedTable as e:
+    except psycopg2.errors.Error as e:
         print(f"error: {e}")
         print("Referential_Integrity_Check will return false")
+        cursor.connection.rollback()
         return False, None
         
