@@ -9,7 +9,7 @@ def connect_to_db():
         "dbname": "cosc3380",
         "user": "dbs34",
         "port": "5432",
-        "password": "Team343380"
+        "password": ""
     }
 
     try:
